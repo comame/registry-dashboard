@@ -20,6 +20,7 @@ async function main() {
 
     for (const deleteButton of deleteButtons) {
         deleteButton.addEventListener('click', async e => {
+            if (!confirm('Delete?')) return
             const button = e.currentTarget
             const ref = button.getAttribute('ref')
             const [ repo, tag ] = ref.split(':')
