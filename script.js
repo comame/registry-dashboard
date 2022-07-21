@@ -5,12 +5,14 @@ async function main() {
 
     for (const repo of repos) {
         let htmlStr = `<ul>`
-        const tags = (await getTags(repo)).tags
+        /** @type {string[]} */
+        const tags = (await getTags(repo)).tags?.sort()
         if (!tags) continue
-        htmlStr += tags.map(tag => {
+        htmlStr += (await Promise.all(tags.map(async (tag) => {
             const ref = `${repo}:${tag}`
-            return `<li><button class='delete-button' ref='${ref}'>DELETE</button>${ref}</li>`
-        }).join('')
+            const digest = await describeManifestDigest(repo, tag)
+            return `<li><button class='delete-button' ref=${ref} digest=${digest}>DELETE</button>${ref}@${digest.slice(7, 7 + 12)}</li>`
+        }))).join('')
         htmlStr += '</ul>'
 
         appEl.innerHTML += htmlStr
@@ -24,7 +26,7 @@ async function main() {
             const button = e.currentTarget
             const ref = button.getAttribute('ref')
             const [ repo, tag ] = ref.split(':')
-            const digest = await describeManifestDigest(repo, tag)
+            const digest = button.getAttribute('digest')
             await deleteManifest(repo, digest)
             location.reload()
         })
