@@ -11,26 +11,27 @@ async function main() {
         htmlStr += (await Promise.all(tags.map(async (tag) => {
             const ref = `${repo}:${tag}`
             const digest = await describeManifestDigest(repo, tag)
-            return `<li><button class='delete-button' ref=${ref} digest=${digest}>DELETE</button>${ref}@${digest.slice(7, 7 + 12)}</li>`
+            return `<li><input class='delete-check' ref=${ref} digest=${digest} type='checkbox'></input>${ref}@${digest.slice(7, 7 + 12)}</li>`
         }))).join('')
         htmlStr += '</ul>'
 
         appEl.innerHTML += htmlStr
     }
 
-    const deleteButtons = Array.from(document.getElementsByClassName('delete-button'))
+    const deleteChecks = Array.from(document.getElementsByClassName('delete-check'))
+    const deleteButton = document.getElementById('delete-button')
 
-    for (const deleteButton of deleteButtons) {
-        deleteButton.addEventListener('click', async e => {
-            const button = e.currentTarget
-            const ref = button.getAttribute('ref')
+    deleteButton.addEventListener('click', () => {
+        const deleteTargets = deleteChecks.filter(it => it.checked).map(check => {
+            const ref = check.getAttribute('ref')
             const [ repo, tag ] = ref.split(':')
-            const digest = button.getAttribute('digest')
-            if (!confirm(`Delete ${repo}:${tag}@sha256:${digest}`)) return
-            await deleteManifest(repo, digest)
-            location.reload()
+            const digest = check.getAttribute('digest')
+            return [ repo, tag, digest ]
         })
-    }
+        const confirmMessage = deleteTargets.map(it => `${it[0]}:${it[1]}@sha256:${it[2].slice(0, 12)}`).join('\n')
+        if (!confirm(confirmMessage)) return
+        Promise.all(deleteTargets.map(it => deleteManifest(it[0], it[2]))).then(() => { location.reload() })
+    })
 }
 
 main()
